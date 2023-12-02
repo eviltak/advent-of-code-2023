@@ -8,13 +8,13 @@ macro_rules! input_path {
 #[macro_export]
 macro_rules! input_file {
     () => {
-        std::fs::File::open(input_path!())
+        std::fs::File::open($crate::input_path!())
     };
 }
 
 #[macro_export]
 macro_rules! input_lines {
     () => {
-        input_file!().map(|f| std::io::BufRead::lines(std::io::BufReader::new(f)))
+        $crate::input_file!().map(|f| std::io::BufRead::lines(std::io::BufReader::new(f)))
     };
 }
