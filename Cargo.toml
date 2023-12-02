@@ -2,5 +2,9 @@
 resolver = "2"
 members = [
     "day01",
+    "day02",
     "util",
 ]
+
+[workspace.dependencies]
+text_io = "0.1.12"
