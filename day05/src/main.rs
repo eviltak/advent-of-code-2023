@@ -1,4 +1,5 @@
 use std::io::{BufRead, BufReader};
+use std::ops::Range;
 
 struct Entry {
     source: u64,
@@ -7,8 +8,12 @@ struct Entry {
 }
 
 impl Entry {
+    fn contains(&self, x: u64) -> bool {
+        self.source <= x && x < self.source + self.len
+    }
+
     fn map(&self, x: u64) -> u64 {
-        if self.source <= x && x < self.source + self.len {
+        if self.contains(x) {
             x - self.source + self.dest
         } else {
             x
@@ -39,10 +44,40 @@ impl Map {
         Map { entries }
     }
 
-    fn map(&self, x: u64) -> u64 {
+    fn first_entry_ending_after(&self, x: u64) -> Option<&Entry> {
         self.entries
-            .get(self.entries.partition_point(|r| r.source <= x).wrapping_sub(1))
+            .get(self.entries.partition_point(|e| x >= e.source + e.len))
+    }
+
+    fn map(&self, x: u64) -> u64 {
+        self.first_entry_ending_after(x)
+            .filter(|e| e.contains(x))
             .map_or(x, |r| r.map(x))
+    }
+
+    fn map_range(&self, mut r: Range<u64>) -> Vec<Range<u64>> {
+        let mut ranges = vec![];
+
+        while let (false, Some(e)) = (r.is_empty(), self.first_entry_ending_after(r.start)) {
+            if r.end <= e.source {
+                break;
+            }
+
+            if !e.contains(r.start) {
+                ranges.push(r.start..e.source);
+                r.start = e.source;
+            }
+
+            let new_start = r.end.min(e.source + e.len);
+            ranges.push(e.map(r.start)..e.map(new_start - 1) + 1);
+            r.start = new_start;
+        }
+
+        if !r.is_empty() {
+            ranges.push(r);
+        }
+
+        ranges
     }
 }
 
@@ -86,4 +121,14 @@ fn main() {
         .min().unwrap();
 
     println!("Part 1: {}", part1);
+
+    let part2 = seeds.chunks_exact(2)
+        .map(|chunk| chunk[0]..chunk[0] + chunk[1])
+        .flat_map(|seed_range|
+            maps.iter().fold(vec![seed_range], |ranges, m| ranges.into_iter().flat_map(|r| m.map_range(r)).collect())
+        )
+        .map(|r| r.start)
+        .min().unwrap();
+
+    println!("Part 2: {}", part2);
 }
